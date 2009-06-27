@@ -1,1 +1,0 @@
-/home/jamiel/.vim/plugin/symfony.vim
