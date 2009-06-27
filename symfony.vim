@@ -1,4 +1,4 @@
-" vim IDE for the symfony PHP framework. Provides easy browsing between symfony modules. 
+" vim IDE for the symfony PHP framework to speed up development 
 " Last Change:  27.06.2009
 " Maintainer:   Jamie Learmonth <jamie at boxlightmedia dot com>
 " Maintainer:   Nicolas MARTIN <email.de.nicolas.martin at gmail dot com>
