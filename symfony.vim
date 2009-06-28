@@ -23,6 +23,9 @@ map sv :SfSwitchView<CR>
 " Switch to a test file
 map st :SfSwitchToTest<CR>
 
+" Run current functional test
+map srt :SfRunTest<CR>
+
 " Clear cache
 map sc :SfClearCache<CR>
 
@@ -75,7 +78,7 @@ endfunction
 
 " Command line actions
 function! SfCallCommandLine(namespace, task, arguments)
-  exec(':cd ' . g:sf_root_dir);
+  exec(':cd ' . g:sf_root_dir)
   execute "!symfony " . a:namespace . ":" . a:task . " " . a:arguments 
   redraw! 
 endfunction
@@ -321,6 +324,15 @@ function! SfSwitchToTest()
   endif
 endfunction
 
+function! SfRunTest()
+  if (!IsATest())
+    return ''
+  endif
+
+  call SfCallCommandLine('test', 'functional', g:sf_app_name.' '.g:sf_module_name.'Actions')
+
+endfunction
+
 function! SfPluginLoad(path)
   if ( finddir('apps', a:path) != '') "&& (finddir('config', a:path) != '') && (finddir('lib', a:path) != '') && (finddir('web', a:path) != '')
     let g:sf_root_dir = a:path.'/'
@@ -356,6 +368,7 @@ command! SfSwitchToTest :call SfSwitchToTest()
 command! -nargs=1 -complete=dir SfPluginLoad :call SfPluginLoad(<args>)
 command! SfMenu :call SfMenu()
 command! SfClearCache :call SfClearCache()
+command! SfRunTest :call SfRunTest()
 
 
 let g:sf_app_name      = ""
