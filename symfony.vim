@@ -333,6 +333,39 @@ function! SfRunTest()
 
 endfunction
 
+" Loads a template
+function! SfLoadTemplate(name)
+  let g:sf_vim_template_dir=$HOME.'/.vim/symfony/templates/'
+  let l:template=g:sf_vim_template_dir.a:name.'.tpl'
+  
+  if !filereadable(l:template)
+    echo "Cannot find template (" . l:template . ")"
+    return
+  endif
+
+  exe '0read '.l:template
+
+endfunction
+
+" Substitutes placeholders in a form
+function! SfSubstitutePlaceHolder(tag, replacement)
+  let l:lineno = search(a:tag) 
+
+  if (0 != l:lineno)
+    call setline(l:lineno, substitute(getline(l:lineno), a:tag, a:replacement, 'g'))
+    return 1
+  else
+    return 0
+  endif
+endfunction
+
+function! SfLoadFormTemplate()
+  call SfLoadTemplate('form')
+
+  let l:form_name = substitute(expand('%:t'), '\(.*\)Form.class.php', '\1', 'g')
+  call SfSubstitutePlaceHolder('###FORMNAME###', l:form_name)
+endfunction
+
 function! SfPluginLoad(path)
   if ( finddir('apps', a:path) != '') "&& (finddir('config', a:path) != '') && (finddir('lib', a:path) != '') && (finddir('web', a:path) != '')
     let g:sf_root_dir = a:path.'/'
@@ -378,3 +411,6 @@ let g:last_template_line = []
 let g:last_action_line = []
 
 autocmd BufEnter,BufLeave,BufWipeout * call SfPluginLoad(getcwd())  " Automatically reload .vimrc when changing
+
+" Load Templates
+autocmd BufNewFile *Form.class.php call SfLoadFormTemplate()
