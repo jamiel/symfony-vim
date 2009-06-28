@@ -20,8 +20,12 @@ map sm :SfMenu<CR>
 " Switch between action and template
 map sv :SfSwitchView<CR>
 
+" Switch to a test file
+map st :SfSwitchToTest<CR>
+
 " Clear cache
 map sc :SfClearCache<CR>
+
 
 
 " Displays a menu of available commands
@@ -37,7 +41,6 @@ function! SfMenu()
     call SfGenerateCTags()
   endif
 endfunction
-
 
 function! SfCreateAction(name)
   let l:func_name = "execute" . toupper(a:name[0]) . a:name[1:]
@@ -65,7 +68,7 @@ function! SfGenerateCTags()
 
   exec ":cd " . g:sf_root_dir 
 
-  let ctag_cmd = 'ctags -a -f data/vim.ctags -h ".php" -R --exclude="\.svn" --totals=yes --tag-relative=yes --PHP-kinds=+cf --regex-PHP="/abstract class ([^ ]*)/\1/c/" --regex-PHP="/interface ([^ ]*)/\1/c/" --regex-PHP="/(public |private |static |protected )+function ([^ ()]*)/\2/f/"'
+  let ctag_cmd = 'ctags -a -f data/vim.ctags -h ".php" --languages=php -R --exclude="\.svn" --totals=yes --tag-relative=yes --PHP-kinds=+cf --regex-PHP="/abstract class ([^ ]*)/\1/c/" --regex-PHP="/interface ([^ ]*)/\1/c/" --regex-PHP="/(public |private |static |protected )+function ([^ ()]*)/\2/f/"'
   let ctag_resp = system(ctag_cmd)
 
 endfunction
@@ -73,25 +76,30 @@ endfunction
 " Command line actions
 function! SfCallCommandLine(namespace, task, arguments)
   exec(':cd ' . g:sf_root_dir);
-  exec(':silent !symfony ' . a:namespace . ':' . a:task . ' ' . a:arguments . ' > /dev/null')
+  execute "!symfony " . a:namespace . ":" . a:task . " " . a:arguments 
   redraw! 
 endfunction
 
 function! SfClearCache()
   call SfCallCommandLine("cache", "clear", "")
-  echo "Cache cleared"
+  echo "Symfony cache cleared"
 endfunction
 
 
 " Determine all the paths
 function! ReconfigPaths()
   let file = expand('%:p')
-    let g:sf_app_name = substitute(file, '.*apps\(/\|\\\)\(.\{-\}\)\(/\|\\\).*', '\2', 'g')
-    let g:sf_module_name = substitute(file, '.*modules\(/\|\\\)\(.\{-\}\)\(/\|\\\).*', '\2', 'g')
+    if (!IsATest())
+      let g:sf_app_name = substitute(file, '.*apps\(/\|\\\)\(.\{-\}\)\(/\|\\\).*', '\2', 'g')
+      let g:sf_module_name = substitute(file, '.*modules\(/\|\\\)\(.\{-\}\)\(/\|\\\).*', '\2', 'g')
+    else
+      let g:sf_app_name = substitute(file, '.*functional\/\(.*\)\/.*', '\1', 'g')
+      let g:sf_module_name = substitute(file, '.*functional\/' . g:sf_app_name . '\/\(.*\)ActionsTest.php', '\1', 'g')
+    endif
 
   if (exists("g:sf_root_dir"))
-  call SetAppConfig()
-  call SetModuleConfig()
+    call SetAppConfig()
+    call SetModuleConfig()
   endif
 endfunction
 
@@ -110,6 +118,8 @@ function! SetAppConfig()
   let g:sf_app_templates   = g:sf_app . 'templates/'
   let g:sf_app_modules     = g:sf_app . 'modules/'
   let g:sf_app_config      = g:sf_app . 'config/'
+  let g:sf_test_dir        = g:sf_root_dir . 'test/'
+  let g:sf_app_test_dir    = g:sf_test_dir . '/functional/' . g:sf_app_name . '/'
 endfunction
 
 function! SetModuleConfig()
@@ -169,7 +179,7 @@ function! GetExecuteActionNameFromAction(action_name)
   return 'execute' . substitute(a:action_name, '^\(.\?\)', '\u\1\E', "g")
 endfunction
 
-function! ImAmInAModule() 
+function! IsAModule() 
   if (matchstr(expand('%:p'), 'apps\(/\|\\\).\{-}\(/\|\\\)modules\(/\|\\\).\{-}\(/\|\\\)') != '')
     return 1
   else 
@@ -177,7 +187,7 @@ function! ImAmInAModule()
   endif
 endfunction
 
-function! ImAmInAnAction() 
+function! IsAnAction() 
   if (matchstr(expand('%:p'), 'apps\(/\|\\\).\{-}\(/\|\\\)modules\(/\|\\\).\{-}\(/\|\\\)actions\(/\|\\\)actions.class.php') != '')
     return 1
   else 
@@ -185,7 +195,7 @@ function! ImAmInAnAction()
   endif
 endfunction
 
-function! ImAmInAComponent() 
+function! IsAComponent() 
   if (matchstr(expand('%:p'), 'apps\(/\|\\\).\{-}\(/\|\\\)modules\(/\|\\\).\{-}\(/\|\\\)actions\(/\|\\\)components.class.php') != '')
     return 1
   else 
@@ -193,7 +203,15 @@ function! ImAmInAComponent()
   endif
 endfunction
 
-function! ImAmInAComponentTemplate()
+function! IsATest()
+  if (matchstr(expand('%:t'), 'Test') != '')
+    return 1
+  else
+    return '' 
+  endif
+endfunction
+
+function! IsAComponentTemplate()
   if (matchstr(expand('%:p'), 'apps\(/\|\\\).\{-}\(/\|\\\)modules\(/\|\\\).\{-}\(/\|\\\)templates\(/\|\\\)_.\{-}.php') != '')
     return 1
   else 
@@ -201,8 +219,7 @@ function! ImAmInAComponentTemplate()
   endif
 endfunction
   
-function! ImAmInAnActionTemplate()
-endif
+function! IsAnActionTemplate()
 
 endfunction
 
@@ -220,7 +237,7 @@ function! Switch()
     call SfPluginLoad(getcwd())
   endif
     
-  if (ImAmInAModule())
+  if (IsAModule())
 
     if (FindCurrentAction() != '') 
 
@@ -228,14 +245,14 @@ function! Switch()
 
       let g:last_action_line = getpos('.')
       
-      if (ImAmInAnAction())
+      if (IsAnAction())
         if (g:last_template_line != [])
           exec 'edit ' . g:sf_module_templates.GetSuccessTemplateFromAction(FindCurrentAction())
           call cursor(g:last_template_line[1], g:last_template_line[2], 0)
         else
           exec 'edit ' . g:sf_module_templates.GetSuccessTemplateFromAction(FindCurrentAction())
         endif
-      elseif (ImAmInAComponent())
+      elseif (IsAComponent())
         if (g:last_template_line != [])
           exec 'edit ' . g:sf_module_templates.GetSuccessTemplateFromComponent(FindCurrentAction())
           call cursor(g:last_template_line[1], g:last_template_line[2], 0)
@@ -247,11 +264,11 @@ function! Switch()
       let g:last_template_line = []
 
     else
-      " we are in a template  so let's go the current module action/function
+      " we are in a template or test so let's go the current module action/function
       
       let g:last_template_line = getpos('.')
 
-      if (ImAmInAComponentTemplate())
+      if (IsAComponentTemplate())
         if (g:last_action_line != [])
           exec 'edit ' . g:sf_module_components
           call cursor(g:last_action_line[1], g:last_action_line[2], 0)
@@ -274,32 +291,35 @@ function! Switch()
       "call cursor(search('}')-1, 100, 0)
     endif
 
-  else 
+  else
     call g:EchoError("Not in a symfony module context, unable to switch view")
     return 0
   endif
 
 endfunction
 
+function! SfSwitchToTest()
 
-""""""""""""""""""""""""""""
-" map <F8> :SfSwitchView <CR>
+  if (IsAComponent() || IsAnAction())
+    let g:last_action_line = getpos('.')
+    let g:last_action = expand("%:p")
+    exec 'edit ' . g:sf_app_test_dir . g:sf_module_name . 'ActionsTest.php'
+  elsei (IsATest())
+    let g:last_test_line = getpos('.')
 
-command! -complete=dir SfCreateAction :call SfCreateAction(expand('<cword>'))
-command! -n=? -complete=dir SfSwitchView :call Switch()
-command! -nargs=1 -complete=dir SfPluginLoad :call SfPluginLoad(<args>)
-command! SfMenu :call SfMenu()
-command! SfClearCache :call SfClearCache()
+    if (exists("g:last_action"))
+      exec 'edit ' . g:last_action
+    else
+      exec 'edit ' . g:sf_module_actions
+    endif
 
-
-let g:sf_app_name      = ""
-let g:sf_module_name   = "" 
-
-let g:last_template_line = []
-let g:last_action_line = []
-
-autocmd BufEnter,BufLeave,BufWipeout * call SfPluginLoad(getcwd())  " Automatically reload .vimrc when changing
-" autocmd BufWrite *.php call SfGenerateCTags()
+    if (g:last_action_line != [])
+      call cursor(g:last_action_line[1], g:last_action_line[2], 0)
+    endif
+  elsei (IsATest())
+    let g:last_test_line = getpos('.')
+  endif
+endfunction
 
 function! SfPluginLoad(path)
   if ( finddir('apps', a:path) != '') "&& (finddir('config', a:path) != '') && (finddir('lib', a:path) != '') && (finddir('web', a:path) != '')
@@ -322,5 +342,26 @@ function! SfPluginLoad(path)
       endif
     endif
   endif
-
+ 
+  let g:sf_extra_dir = $HOME."/.vim/symfony"
+  if filereadable(g:sf_extra_dir."/utils.vim")
+    source ~/.vim/symfony/utils.vim
+  endif
 endfunction
+
+" Set all commands
+command! -complete=dir SfCreateAction :call SfCreateAction(expand('<cword>'))
+command! -n=? -complete=dir SfSwitchView :call Switch()
+command! SfSwitchToTest :call SfSwitchToTest()
+command! -nargs=1 -complete=dir SfPluginLoad :call SfPluginLoad(<args>)
+command! SfMenu :call SfMenu()
+command! SfClearCache :call SfClearCache()
+
+
+let g:sf_app_name      = ""
+let g:sf_module_name   = "" 
+
+let g:last_template_line = []
+let g:last_action_line = []
+
+autocmd BufEnter,BufLeave,BufWipeout * call SfPluginLoad(getcwd())  " Automatically reload .vimrc when changing
