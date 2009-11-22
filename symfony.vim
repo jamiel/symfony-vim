@@ -366,6 +366,13 @@ function! SfLoadFormTemplate()
   call SfSubstitutePlaceHolder('###FORMNAME###', l:form_name)
 endfunction
 
+function! SfLoadValidatorTemplate()
+  call SfLoadTemplate('validator')
+
+  let l:validator_name = substitute(expand('%:t'), '\(.*\)Validator.class.php', '\1', 'g')
+  call SfSubstitutePlaceHolder('###VALIDATORNAME###', l:validator_name)
+endfunction
+
 function! SfPluginLoad(path)
   if ( finddir('apps', a:path) != '') "&& (finddir('config', a:path) != '') && (finddir('lib', a:path) != '') && (finddir('web', a:path) != '')
     let g:sf_root_dir = a:path.'/'
@@ -414,3 +421,6 @@ autocmd BufEnter,BufLeave,BufWipeout * call SfPluginLoad(getcwd())  " Automatica
 
 " Load Templates
 autocmd BufNewFile *Form.class.php call SfLoadFormTemplate()
+autocmd BufNewFile *Form.php call SfLoadFormTemplate()
+autocmd BufNewFile *Validator.class.php call SfLoadValidatorTemplate()
+autocmd BufNewFile *Validator.php call SfLoadValidatorTemplate()
