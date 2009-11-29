@@ -362,14 +362,14 @@ endfunction
 function! SfLoadFormTemplate()
   call SfLoadTemplate('form')
 
-  let l:form_name = substitute(expand('%:t'), '\(.*\)Form.class.php', '\1', 'g')
+  let l:form_name = substitute(expand('%:t'), '\(.*\)Form\(.class\)\?.php', '\1', 'g')
   call SfSubstitutePlaceHolder('###FORMNAME###', l:form_name)
 endfunction
 
 function! SfLoadValidatorTemplate()
   call SfLoadTemplate('validator')
 
-  let l:validator_name = substitute(expand('%:t'), '\(.*\)Validator.class.php', '\1', 'g')
+  let l:validator_name = substitute(expand('%:t'), '\(.*\)Validator\(.class\)\?.php', '\1', 'g')
   call SfSubstitutePlaceHolder('###VALIDATORNAME###', l:validator_name)
 endfunction
 
